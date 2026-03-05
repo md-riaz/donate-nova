@@ -64,7 +64,7 @@ return [
     | You can override the default success and failure URLs
     */
     'redirect_urls' => [
-        'success' => null,
-        'failed' => null,
+        'success' => '/thank-you',
+        'failed' => '/',
     ],
 ];
