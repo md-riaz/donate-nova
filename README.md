@@ -11,9 +11,14 @@ Donate Nova is a single-purpose donation engine that provides a streamlined conv
 
 ### Landing Page Preview
 
+![Landing Page - Full View](docs/screenshots/landing-page-full.png)
+
 The landing page has been designed with conversion optimization in mind, featuring:
 
 **🎯 Hero Section**
+
+![Hero Section](docs/screenshots/landing-page-hero.png)
+
 - Bold headline: "Transform Lives, Build Hope"
 - Emotional connection with impactful messaging
 - Clear value proposition for Nova Foundation
@@ -40,6 +45,9 @@ The landing page has been designed with conversion optimization in mind, featuri
 - Bank-level encryption messaging
 
 **💰 Donation Form (Conversion-Optimized)**
+
+![Donation Form](docs/screenshots/landing-page-donation-form.png)
+
 - Quick amount selectors (৳500, ৳1,000, ৳2,000, ৳5,000, ৳10,000)
 - Custom amount option
 - Only 3 required fields (name, phone, amount)
