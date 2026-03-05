@@ -7,14 +7,73 @@ A focused Laravel-based donation payment system integrated with bKash payment ga
 Donate Nova is a single-purpose donation engine that provides a streamlined conversion funnel:
 - Story → Trust → Donation Form → bKash Payment → Thank You
 
+## Screenshots
+
+### Landing Page Preview
+
+The landing page has been designed with conversion optimization in mind, featuring:
+
+**🎯 Hero Section**
+- Bold headline: "Transform Lives, Build Hope"
+- Emotional connection with impactful messaging
+- Clear value proposition for Nova Foundation
+- Prominent CTA button with hover effects
+
+**📊 Impact Stats**
+- 10,000+ Lives Impacted
+- 50+ Active Projects
+- 25+ Districts Reached
+- Builds credibility and social proof
+
+**📖 Story Section**
+- Four program areas with visual cards:
+  - 🎓 Education for All
+  - 🏥 Healthcare Access
+  - 🏗️ Community Development
+  - 🚨 Emergency Relief
+- Each area explains the impact of donations
+
+**🛡️ Trust & Transparency**
+- 100% Secure payment badge
+- Full transparency promise
+- 99% of donations go to programs
+- Bank-level encryption messaging
+
+**💰 Donation Form (Conversion-Optimized)**
+- Quick amount selectors (৳500, ৳1,000, ৳2,000, ৳5,000, ৳10,000)
+- Custom amount option
+- Only 3 required fields (name, phone, amount)
+- Visual feedback on form interactions
+- Prominent bKash payment button with gradient
+
+**👥 Social Proof**
+- 5,000+ Active Donors
+- 4.9/5 Donor Satisfaction
+- 100% Transparency Score
+- Real testimonial from verified donor
+
+> **Note**: For detailed section-by-section breakdown, see [`docs/screenshots/LANDING_PAGE.md`](docs/screenshots/LANDING_PAGE.md)
+
+### Key Conversion Features
+
+✅ **Mobile-First Design** - Optimized for smartphone donations
+✅ **Quick Amount Selection** - Preset buttons reduce friction
+✅ **Minimal Form Fields** - Only 3 fields to complete
+✅ **Trust Signals** - Security badges, stats, testimonials
+✅ **Emotional Storytelling** - Connects donors to impact
+✅ **Clear CTAs** - Multiple paths to donation form
+✅ **Smooth Scrolling** - Anchored navigation to form
+
 ## Features
 
 - **Mobile-first design** with Tailwind CSS
 - **Minimal friction** donation form (3 fields only: name, phone, amount)
+- **Quick amount selectors** for faster conversions
 - **Secure bKash payment integration** using tokenized checkout
 - **Payment verification** with status tracking
 - **Donation logging** for reporting and analytics
 - **Real-time payment status updates**
+- **Conversion-optimized landing page** with storytelling and trust elements
 
 ## Tech Stack
 
