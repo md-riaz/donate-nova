@@ -38,7 +38,7 @@
 
                     <!-- bKash Logo Section -->
                     <div class="mt-6 flex items-center justify-center gap-3">
-                        <span class="text-gray-600 font-medium">Paying with</span>
+                        <span class="text-gray-600 font-medium">Donate with</span>
                         <img src="{{ asset('bkash-logo.svg') }}" alt="bKash" class="h-8" />
                     </div>
                 </div>
