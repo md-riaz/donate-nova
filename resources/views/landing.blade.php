@@ -157,7 +157,11 @@
                             type="submit"
                             class="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center group"
                         >
-                            <span class="text-lg">Complete Donation with bKash</span>
+                            <span class="text-lg flex items-center gap-2">
+                                Complete Donation with
+                                <img src="{{ asset('bkash-icon.svg') }}" alt="bKash icon" class="h-6 w-6" />
+                                bKash
+                            </span>
                             <svg class="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                             </svg>
