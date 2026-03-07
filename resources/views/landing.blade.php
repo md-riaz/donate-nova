@@ -5,13 +5,18 @@
 @section('content')
 <div class="min-h-screen flex flex-col">
     <!-- Hero Section -->
-    <div class="bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700 text-white py-24 px-4 relative overflow-hidden">
-        <div class="absolute inset-0 bg-black opacity-10"></div>
+    <div class="text-white py-24 px-4 relative overflow-hidden" style="background-image: linear-gradient(135deg, rgba(11,63,119,0.82) 0%, rgba(10,75,143,0.8) 45%, rgba(11,53,104,0.86) 100%), url('https://www.nova.org.bd/Content/img/banner/event-banner.jpg'); background-size: cover; background-position: center;">
+        <div class="absolute inset-0" style="background: linear-gradient(180deg, rgb(199 199 199 / 59%) 0%, rgb(17 17 17 / 45%) 100%);"></div>
         <div class="max-w-5xl mx-auto text-center relative z-10">
             <div class="mb-6">
                 <span class="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">
                     Nova Foundation
                 </span>
+            </div>
+            <div class="mb-6 flex justify-center">
+                <a href="https://www.nova.org.bd/" target="_blank" rel="noopener">
+                    <img src="https://www.nova.org.bd/Content/img/logo/nova-foundation.svg" alt="Nova Foundation Logo" class="h-14 md:h-16 w-auto" />
+                </a>
             </div>
             <h1 class="text-5xl md:text-6xl font-bold mb-6 leading-tight">
                 Transform Lives,<br/>Build Hope
@@ -39,7 +44,7 @@
                     <!-- bKash Logo Section -->
                     <div class="mt-6 flex items-center justify-center gap-3">
                         <span class="text-gray-600 font-medium">Donate with</span>
-                        <img src="{{ asset('bkash-logo.svg') }}" alt="bKash" class="h-8" />
+                        <img src="{{ asset('bkash-icon.svg') }}" alt="bKash icon" class="h-8 w-8" />
                     </div>
                 </div>
 
@@ -150,7 +155,7 @@
                                 class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                                 required
                             />
-                            <p class="text-sm text-gray-500 mt-2">Your bKash number for payment</p>
+                            <p class="text-sm text-gray-500 mt-2">Your contact phone number for donation updates</p>
                         </div>
 
                         <button
@@ -159,7 +164,7 @@
                         >
                             <span class="text-lg flex items-center gap-2">
                                 Complete Donation with
-                                <img src="{{ asset('bkash-icon.svg') }}" alt="bKash icon" class="h-6 w-6" />
+                                <img src="{{ asset('bkash-icon-white.svg') }}" alt="bKash icon" class="h-6 w-6" />
                                 bKash
                             </span>
                             <svg class="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,6 +181,18 @@
                         </form>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donation Notice Section -->
+    <div class="bg-white py-10 px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl px-5 py-5 md:px-8 md:py-6 text-center shadow-sm">
+                <p class="text-sm md:text-base text-gray-700 leading-relaxed">
+                    After giving your donation, please inform us through SMS or phone (01742-190704).
+                    Share the donated amount and specify the project where you directed your contribution.
+                </p>
             </div>
         </div>
     </div>
@@ -328,16 +345,136 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-12 px-4">
+    <!-- Contact Us Section -->
+    <div class="bg-gradient-to-b from-white to-green-50/40 py-24 px-4">
         <div class="max-w-5xl mx-auto">
-            <div class="text-center mb-8">
-                <h3 class="text-2xl font-bold mb-2">Nova Foundation</h3>
-                <p class="text-gray-300">Building a better tomorrow, together</p>
+            <div class="bg-white border border-green-100 rounded-2xl p-6 md:p-10 shadow-sm">
+                <div class="text-center">
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-800">Contact Us for Donation</h2>
+                    <p class="text-gray-600 mb-8">We are here to help you complete your contribution smoothly.</p>
+                </div>
+
+                <div class="mt-14 grid md:grid-cols-2 gap-6">
+                    <div class="h-full bg-gray-50 border border-gray-200 rounded-xl p-6 transition-all hover:shadow-md">
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Phone</p>
+                                <p class="text-gray-900 font-semibold text-lg">09613-825925</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="h-full bg-gray-50 border border-gray-200 rounded-xl p-6 transition-all hover:shadow-md">
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2.94 6.34A2 2 0 014.5 5h11a2 2 0 011.56 1.34L10 10.74 2.94 6.34z"></path>
+                                    <path d="M18 8.12l-7.4 4.18a1.25 1.25 0 01-1.2 0L2 8.12V14a2 2 0 002 2h12a2 2 0 002-2V8.12z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Email</p>
+                                <p class="text-gray-900 font-semibold text-lg">info@nova.org.bd</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="h-full bg-gray-50 border border-gray-200 rounded-xl p-6 transition-all hover:shadow-md">
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">USA Office</p>
+                                <p class="text-gray-900 font-semibold leading-snug">7200 Lake Ellenor Dr, Suite 108 Orlando, FL-32809</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="h-full bg-gray-50 border border-gray-200 rounded-xl p-6 transition-all hover:shadow-md">
+                        <div class="flex items-start gap-4">
+                            <div class="w-11 h-11 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-sm">Bangladesh Office</p>
+                                <p class="text-gray-900 font-semibold leading-snug">H# Padmarag, Rahman Nagar, Bogura - 5800</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="border-t border-gray-700 pt-8 text-center">
-                <p class="text-gray-400">&copy; {{ date('Y') }} Nova Foundation. All rights reserved.</p>
-                <p class="mt-2 text-gray-500">Secure payment powered by bKash | Registered Charity</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-gray-300 px-4 pt-14" style="background:#111722;">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-10 pb-14">
+                <div>
+                    <a href="https://www.nova.org.bd/" target="_blank" rel="noopener" class="inline-block">
+                        <img src="{{ asset('nova-foundation.svg') }}" alt="Nova Foundation" class="h-11 w-auto" />
+                    </a>
+                    <p class="mt-4 text-sm leading-7 text-gray-400 max-w-sm">
+                        The Nova Foundation is a Bangladesh nonprofit social development organization. We work to improve healthcare, poverty reduction, education, environment and livelihoods.
+                    </p>
+                    <div class="mt-4 flex items-center gap-2">
+                        <a href="https://www.facebook.com/nova.org.bd" target="_blank" rel="noopener" class="w-7 h-7 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center">f</a>
+                        <a href="https://www.linkedin.com/company/nova-foundation-bd" target="_blank" rel="noopener" class="w-7 h-7 rounded bg-green-600 hover:bg-green-500 text-white text-[10px] font-semibold flex items-center justify-center">in</a>
+                        <a href="https://www.youtube.com/@novafoundationbd" target="_blank" rel="noopener" class="w-7 h-7 rounded bg-green-600 hover:bg-green-500 text-white text-[10px] flex items-center justify-center">▶</a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-gray-200 text-base font-medium mb-4">Projects</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://www.nova.org.bd/self-dependent-program/" target="_blank" rel="noopener" class="hover:text-green-400">Self-Dependent Program</a></li>
+                        <li><a href="https://www.nova.org.bd/free-healthcare/" target="_blank" rel="noopener" class="hover:text-green-400">Free Healthcare</a></li>
+                        <li><a href="https://www.nova.org.bd/clean-water-project/" target="_blank" rel="noopener" class="hover:text-green-400">Clean Water Project</a></li>
+                        <li><a href="https://www.nova.org.bd/orphanage-center/" target="_blank" rel="noopener" class="hover:text-green-400">Orphanage Center</a></li>
+                        <li><a href="https://www.nova.org.bd/zakat-distribution/" target="_blank" rel="noopener" class="hover:text-green-400">Zakat Distribution</a></li>
+                        <li><a href="https://www.nova.org.bd/blood-donation/" target="_blank" rel="noopener" class="hover:text-green-400">Blood Donation</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-gray-200 text-base font-medium mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://www.nova.org.bd/about-us/" target="_blank" rel="noopener" class="hover:text-green-400">About Us</a></li>
+                        <li><a href="https://www.nova.org.bd/events/" target="_blank" rel="noopener" class="hover:text-green-400">Events</a></li>
+                        <li><a href="https://www.nova.org.bd/media-coverage/" target="_blank" rel="noopener" class="hover:text-green-400">Media Coverage</a></li>
+                        <li><a href="https://www.nova.org.bd/videos/" target="_blank" rel="noopener" class="hover:text-green-400">Videos</a></li>
+                        <li><a href="https://www.nova.org.bd/volunteer/" target="_blank" rel="noopener" class="hover:text-green-400">Volunteer</a></li>
+                        <li><a href="https://www.nova.org.bd/contact-us/" target="_blank" rel="noopener" class="hover:text-green-400">Contact Us</a></li>
+                        <li><a href="https://www.nova.org.bd/privacy-policy/" target="_blank" rel="noopener" class="hover:text-green-400">Privacy Policy</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-gray-200 text-base font-medium mb-4">Events</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://www.nova.org.bd/events/" target="_blank" rel="noopener" class="hover:text-green-400">Nova Foundation Events</a></li>
+                        <li><a href="https://www.nova.org.bd/iftar-ramadan-food-distribution/" target="_blank" rel="noopener" class="hover:text-green-400">Iftar & Ramadan Food</a></li>
+                        <li><a href="https://www.nova.org.bd/zakat-distribution/" target="_blank" rel="noopener" class="hover:text-green-400">Zakat Distribution</a></li>
+                        <li><a href="https://www.nova.org.bd/qurbani-meat-distribution/" target="_blank" rel="noopener" class="hover:text-green-400">Qurbani Meat Distribution</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="py-5 text-center text-xs md:text-sm text-gray-500" style="border-top:1px solid #1f2937;">
+                <p>© {{ date('Y') }} Nova Foundation. All Rights Reserved.</p>
+                <p class="mt-1">Website Design &amp; Hosted by <a href="https://alpha.net.bd/" target="_blank" rel="noopener" class="hover:text-green-400">Alpha Net</a>.</p>
             </div>
         </div>
     </footer>
