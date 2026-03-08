@@ -17,8 +17,10 @@ class DonationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => ['required', 'string', 'max:14', 'regex:/^(?:\+88|88)?01[3-9]\d{8}$/'],
             'amount' => 'required|numeric|min:10',
+        ], [
+            'phone.regex' => 'Please enter a valid Bangladeshi mobile number (e.g. +8801XXXXXXXXX, 8801XXXXXXXXX, or 01XXXXXXXXX).',
         ]);
 
         try {
