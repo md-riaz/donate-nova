@@ -1,6 +1,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Allow SSL verification files to be served directly.
+    RewriteRule ^\.well-known/ - [L,NC]
+
     # Keep URLs clean if someone requests /public/... directly.
     RewriteRule ^public/(.*)$ /$1 [R=301,L]
 
