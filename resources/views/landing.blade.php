@@ -88,31 +88,15 @@
                             </button>
                         </div>
 
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl px-5 py-5 md:px-8 md:py-6 text-center shadow-sm">
+                            <p class="text-sm md:text-base text-gray-700 leading-relaxed">
+                                After giving your donation, please inform us through SMS or phone (01742-190704).
+                                Share the donated amount and specify the project where you directed your contribution.
+                            </p>
+                        </div>
+
                         <form method="POST" action="{{ route('donate.submit') }}" id="donationForm">
                             @csrf
-
-                            <div class="mb-5">
-                                <label for="amount" class="block text-gray-700 font-semibold mb-2">
-                                    <span class="flex items-center">
-                                        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Donation Amount (BDT)
-                                    </span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="amount"
-                                    id="amount"
-                                    value="{{ old('amount') }}"
-                                    placeholder="Enter custom amount"
-                                    min="10"
-                                    step="1"
-                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                                    required
-                                />
-                                <p class="text-sm text-gray-500 mt-2">Minimum donation: ৳10</p>
-                            </div>
                     </div>
 
                     <!-- Right Column - Personal Info -->
@@ -158,6 +142,29 @@
                             <p class="text-sm text-gray-500 mt-2">Your contact phone number for donation updates</p>
                         </div>
 
+                        <div class="mb-6">
+                            <label for="amount" class="block text-gray-700 font-semibold mb-2">
+                                <span class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Donation Amount (BDT)
+                                </span>
+                            </label>
+                            <input
+                                type="number"
+                                name="amount"
+                                id="amount"
+                                value="{{ old('amount') }}"
+                                placeholder="Enter custom amount"
+                                min="10"
+                                step="1"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                                required
+                            />
+                            <p class="text-sm text-gray-500 mt-2">Minimum donation: ৳10</p>
+                        </div>
+
                         <button
                             type="submit"
                             class="w-full bg-gradient-to-r from-pink-600 to-pink-700 hover:from-pink-700 hover:to-pink-800 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center group"
@@ -172,27 +179,9 @@
                             </svg>
                         </button>
 
-                        <div class="mt-4 flex items-center justify-center text-sm text-gray-500">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                            </svg>
-                            Secured by 256-bit SSL encryption
-                        </div>
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Donation Notice Section -->
-    <div class="bg-white py-10 px-4">
-        <div class="max-w-4xl mx-auto">
-            <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-xl px-5 py-5 md:px-8 md:py-6 text-center shadow-sm">
-                <p class="text-sm md:text-base text-gray-700 leading-relaxed">
-                    After giving your donation, please inform us through SMS or phone (01742-190704).
-                    Share the donated amount and specify the project where you directed your contribution.
-                </p>
             </div>
         </div>
     </div>

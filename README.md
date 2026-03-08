@@ -208,7 +208,11 @@ donate.nova.org.bd  (Laravel App)
 
 ## bKash Integration
 
-This project uses the [theihasan/laravel-bkash](https://github.com/theihasan/laravel-bkash) package for bKash integration.
+This project uses an application-level bKash API v2 integration via `app/Services/BkashV2Service.php`.
+
+The donation flow calls this service directly from controllers:
+- `app/Http/Controllers/DonationController.php` creates payment and redirects to bKash.
+- `app/Http/Controllers/BkashController.php` handles callback and executes payment.
 
 ### Test Credentials
 
@@ -294,7 +298,7 @@ To integrate with your main CMS website, add a donate button:
 
 - CSRF protection enabled by default (Laravel)
 - Server-side amount validation
-- Payment verification via bKash query API
+- Payment verification via bKash execute API callback flow
 - HTTPS required for production
 - Database transactions for payment processing
 - Secure session handling
@@ -328,7 +332,7 @@ Target metrics:
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
 This project is built on Laravel and uses the following packages:
-- [theihasan/laravel-bkash](https://github.com/theihasan/laravel-bkash) for bKash integration
+- No external bKash SDK package is required; bKash API v2 is integrated in the application service layer.
 
 ## Support
 

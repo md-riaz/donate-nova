@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Donation;
+use App\Services\BkashV2Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Ihasan\Bkash\Facades\Bkash;
 
 class DonationController extends Controller
 {
+    public function __construct(private readonly BkashV2Service $bkash)
+    {
+    }
+
     public function create(Request $request)
     {
         $validated = $request->validate([
@@ -32,16 +36,17 @@ class DonationController extends Controller
             // Initialize bKash payment
             $invoice = 'NOVA-' . time() . '-' . $donation->id;
 
-            $response = Bkash::createPayment([
+            $response = $this->bkash->createPayment([
                 'amount' => $validated['amount'],
                 'merchant_invoice_number' => $invoice,
                 'callback_url' => route('bkash.callback'),
+                'payer_reference' => $validated['phone'],
             ]);
 
             if (isset($response['bkashURL'])) {
                 // Update donation with bKash payment ID
                 $donation->update([
-                    'bkash_payment_id' => $response['paymentID'] ?? null,
+                    'bkash_payment_id' => $response['paymentID'] ?? $response['paymentId'] ?? null,
                 ]);
 
                 return redirect()->away($response['bkashURL']);

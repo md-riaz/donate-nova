@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Donation;
+use App\Services\BkashV2Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Ihasan\Bkash\Facades\Bkash;
 
 class BkashController extends Controller
 {
+    public function __construct(private readonly BkashV2Service $bkash)
+    {
+    }
+
     public function callback(Request $request)
     {
         $paymentID = $request->query('paymentID');
@@ -41,20 +45,20 @@ class BkashController extends Controller
 
             // Execute payment
             if ($paymentID && $status === 'success') {
-                $response = Bkash::executePayment($paymentID);
+                $response = $this->bkash->executePayment($paymentID);
 
                 // Verify payment was successful
                 if (isset($response['transactionStatus']) && $response['transactionStatus'] === 'Completed') {
                     // Update donation status
                     $donation->update([
                         'status' => 'success',
-                        'transaction_id' => $response['trxID'] ?? null,
+                        'transaction_id' => $response['trxID'] ?? $response['trxId'] ?? null,
                         'bkash_payment_id' => $paymentID,
                     ]);
 
                     Log::info('Payment successful', [
                         'donation_id' => $donation->id,
-                        'transaction_id' => $response['trxID'] ?? null,
+                        'transaction_id' => $response['trxID'] ?? $response['trxId'] ?? null,
                     ]);
 
                     // Store donation ID for thank you page

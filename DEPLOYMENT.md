@@ -267,8 +267,10 @@ sudo nano /etc/logrotate.d/donate-nova
 
 1. Create a test donation with a small amount
 2. Complete payment in bKash sandbox
-3. Verify transaction is recorded in database
+3. Verify transaction is recorded in database (`donations` table status should become `success`)
 4. Check logs for any errors: `tail -f storage/logs/laravel.log`
+
+The application uses local bKash API v2 integration through `app/Services/BkashV2Service.php` and callback route `/payment/callback`.
 
 ## Step 14: Go Live
 
@@ -351,7 +353,7 @@ tail -f /var/log/nginx/error.log
 - Verify bKash credentials in `.env`
 - Check `BKASH_SANDBOX` setting matches environment
 - Review logs for API errors
-- Ensure callback URL is accessible from internet
+- Ensure callback URL (`/payment/callback`) is accessible from internet
 
 ### Database Connection Error
 - Verify database credentials in `.env`
