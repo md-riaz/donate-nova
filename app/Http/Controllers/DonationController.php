@@ -44,16 +44,34 @@ class DonationController extends Controller
             ]);
 
             if (isset($response['bkashURL'])) {
+                $redirectUrl = (string) $response['bkashURL'];
+
+                if (! $this->isTrustedBkashRedirectUrl($redirectUrl)) {
+                    Log::warning('Untrusted bKash redirect URL blocked', [
+                        'donation_id' => $donation->id,
+                        'host' => parse_url($redirectUrl, PHP_URL_HOST),
+                    ]);
+
+                    $donation->update(['status' => 'failed']);
+
+                    return redirect()->route('landing')
+                        ->withErrors(['error' => 'Payment redirect validation failed. Please try again.']);
+                }
+
                 // Update donation with bKash payment ID
                 $donation->update([
                     'bkash_payment_id' => $response['paymentID'] ?? $response['paymentId'] ?? null,
                 ]);
 
-                return redirect()->away($response['bkashURL']);
+                return redirect()->away($redirectUrl);
             }
 
             // If payment creation failed
-            Log::error('bKash payment creation failed', ['response' => $response]);
+            Log::error('bKash payment creation failed', [
+                'donation_id' => $donation->id,
+                'statusCode' => $response['statusCode'] ?? null,
+                'statusMessage' => $response['statusMessage'] ?? $response['message'] ?? null,
+            ]);
             $donation->update(['status' => 'failed']);
 
             return redirect()->route('landing')
@@ -61,8 +79,8 @@ class DonationController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Donation creation error', [
+                'donation_id' => $donation->id ?? null,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
 
             if (isset($donation)) {
@@ -72,5 +90,32 @@ class DonationController extends Controller
             return redirect()->route('landing')
                 ->withErrors(['error' => 'An error occurred. Please try again.']);
         }
+    }
+
+    private function isTrustedBkashRedirectUrl(string $url): bool
+    {
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        if ($scheme !== 'https' || $host === '') {
+            return false;
+        }
+
+        $allowedHosts = array_map(
+            static fn ($item) => strtolower(trim((string) $item)),
+            (array) config('bkash.allowed_redirect_hosts', [])
+        );
+
+        foreach ($allowedHosts as $allowedHost) {
+            if ($allowedHost !== '' && ($host === $allowedHost || str_ends_with($host, '.'.$allowedHost))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
