@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep URLs clean if someone requests /public/... directly.
+    RewriteRule ^public/(.*)$ /$1 [R=301,L]
+
+    # Block direct access to sensitive files and folders when project root is web-accessible.
+    RewriteRule ^(\.env|\.env\..*|artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml)$ - [F,L,NC]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)/ - [F,L,NC]
+
+    # Forward all traffic to Laravel public directory.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    # Fallback security if rewrite module is unavailable.
+    RedirectMatch 403 ^/(app|bootstrap|config|database|resources|routes|storage|tests|vendor)/
+</IfModule>
