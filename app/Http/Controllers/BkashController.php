@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class BkashController extends Controller
 {
+    private const CALLBACK_API_DELAY_MS = 2000;
+
     public function __construct(private readonly BkashV2Service $bkash)
     {
     }
@@ -82,24 +84,42 @@ class BkashController extends Controller
 
             // Execute payment
             if ($status === 'success') {
-                $queryResponse = $this->bkash->queryPayment($paymentID);
+                $this->delayBeforeConsistencySensitiveApiCall();
+                $queryResponse = $this->queryPaymentWithRetry($paymentID, 0, 0) ?? [];
                 $finalResponse = $queryResponse;
 
                 // Execute only when query shows payment is not completed yet.
                 if (! $this->isSuccessfulPaymentForDonation($queryResponse, $donation, $paymentID)) {
                     $executeResponse = $this->bkash->executePayment($paymentID);
+
+                    // Trust execute response immediately when it confirms completion.
                     $finalResponse = $executeResponse;
 
-                    $queryAfterExecute = $this->bkash->queryPayment($paymentID);
-                    $finalResponse = $queryAfterExecute;
+                    // Post-execute query can be eventually consistent; retry once with short backoff.
+                    $this->delayBeforeConsistencySensitiveApiCall();
+                    $queryAfterExecute = $this->queryPaymentWithRetry($paymentID, 3, 1000);
+                    if (is_array($queryAfterExecute)
+                        && $this->isSuccessfulPaymentForDonation($queryAfterExecute, $donation, $paymentID)) {
+                        $finalResponse = $queryAfterExecute;
+                    }
                 }
 
                 $trxId = (string) ($finalResponse['trxID'] ?? $finalResponse['trxId'] ?? '');
                 if ($trxId !== '') {
-                    $searchResponse = $this->bkash->searchTransaction($trxId);
+                    try {
+                        $this->delayBeforeConsistencySensitiveApiCall();
+                        $searchResponse = $this->bkash->searchTransaction($trxId);
 
-                    if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
-                        $finalResponse = $searchResponse;
+                        if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
+                            $finalResponse = $searchResponse;
+                        }
+                    } catch (\Throwable $searchError) {
+                        Log::warning('Search transaction failed after execute', [
+                            'donation_id' => $donation->id,
+                            'payment_id_suffix' => substr($paymentID, -8),
+                            'trx_id_suffix' => substr($trxId, -4),
+                            'error' => $searchError->getMessage(),
+                        ]);
                     }
                 }
 
@@ -174,6 +194,36 @@ class BkashController extends Controller
             && $responseAmount === $donationAmount;
     }
 
+    private function queryPaymentWithRetry(string $paymentID, int $retries, int $delayMs): ?array
+    {
+        $attempt = 0;
+
+        while ($attempt <= $retries) {
+            try {
+                return $this->bkash->queryPayment($paymentID);
+            } catch (\Throwable $queryError) {
+                Log::warning('Query payment attempt failed', [
+                    'payment_id_suffix' => substr($paymentID, -8),
+                    'attempt' => $attempt + 1,
+                    'max_attempts' => $retries + 1,
+                    'error' => $queryError->getMessage(),
+                ]);
+
+                if ($attempt >= $retries) {
+                    break;
+                }
+
+                if ($delayMs > 0) {
+                    usleep($delayMs * 1000);
+                }
+            }
+
+            $attempt++;
+        }
+
+        return null;
+    }
+
     private function toUserFriendlyMessage(string $error): string
     {
         $normalized = strtolower($error);
@@ -189,5 +239,10 @@ class BkashController extends Controller
         return trim($error) !== ''
             ? $error
             : 'An error occurred processing your payment.';
+    }
+
+    private function delayBeforeConsistencySensitiveApiCall(): void
+    {
+        usleep(self::CALLBACK_API_DELAY_MS * 1000);
     }
 }

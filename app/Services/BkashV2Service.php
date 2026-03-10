@@ -28,7 +28,7 @@ class BkashV2Service
 
         $requestPayload = [
             'mode' => '0011',
-            'payerReference' => $this->resolvePayerReference((string) ($payload['payer_reference'] ?? '')),
+            'payerReference' => $payload['payer_reference'] ?? 'default',
             'callbackURL' => (string) $payload['callback_url'],
             'amount' => number_format((float) $payload['amount'], 2, '.', ''),
             'currency' => 'BDT',
@@ -306,22 +306,6 @@ class BkashV2Service
         }
 
         return 'HTTP '.$status;
-    }
-
-    private function resolvePayerReference(string $raw): string
-    {
-        $trimmed = trim($raw);
-        $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
-
-        if (strlen($digits) >= 10) {
-            return $digits;
-        }
-
-        if ($trimmed !== '') {
-            return $trimmed;
-        }
-
-        return '01700000000';
     }
 
     private function logApiExchange(
