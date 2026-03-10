@@ -22,6 +22,8 @@ return [
         'payment.bkash.com',
         'sandbox.payment.bkash.com',
         'pay.bka.sh',
+        'checkout.pay.bka.sh',
+        'checkout.sandbox.bka.sh',
         'tokenized.pay.bka.sh',
         'tokenized.sandbox.bka.sh',
     ],

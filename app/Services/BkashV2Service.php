@@ -85,14 +85,14 @@ class BkashV2Service
         $token = $this->getToken();
 
         $response = $this->withToken($token, $credentials['app_key'])
-            ->post('/tokenized/checkout/payment/status', [
+            ->post('/tokenized/checkout/payment/status/', [
                 'paymentID' => $paymentId,
             ]);
 
         $data = $response->json() ?? [];
         $this->logApiExchange(
             'Query Payment API',
-            '/tokenized/checkout/payment/status',
+            '/tokenized/checkout/payment/status/',
             $this->buildTokenRequestHeaders($token, $credentials['app_key']),
             [
                 'paymentID' => $paymentId,
@@ -111,14 +111,14 @@ class BkashV2Service
         $token = $this->getToken();
 
         $response = $this->withToken($token, $credentials['app_key'])
-            ->post('/tokenized/checkout/payment/search', [
+            ->post('/tokenized/checkout/general/searchTransaction', [
                 'trxID' => $trxId,
             ]);
 
         $data = $response->json() ?? [];
         $this->logApiExchange(
-            'Search Transaction API',
-            '/tokenized/checkout/payment/search',
+            'Search Payment API',
+            '/tokenized/checkout/general/searchTransaction',
             $this->buildTokenRequestHeaders($token, $credentials['app_key']),
             [
                 'trxID' => $trxId,
@@ -160,14 +160,14 @@ class BkashV2Service
                 'username' => $credentials['username'],
                 'password' => $credentials['password'],
             ])
-            ->post('/checkout/token/grant', [
+            ->post('/tokenized/checkout/token/grant', [
                 'app_key' => $credentials['app_key'],
                 'app_secret' => $credentials['app_secret'],
             ]);
 
         $this->logApiExchange(
             'Grant Token API',
-            '/checkout/token/grant',
+            '/tokenized/checkout/token/grant',
             $this->buildCredentialRequestHeaders($credentials['username'], $credentials['password']),
             [
                 'app_key' => $credentials['app_key'],
@@ -189,7 +189,7 @@ class BkashV2Service
                 'username' => $credentials['username'],
                 'password' => $credentials['password'],
             ])
-            ->post('/checkout/token/refresh', [
+            ->post('/tokenized/checkout/token/refresh', [
                 'app_key' => $credentials['app_key'],
                 'app_secret' => $credentials['app_secret'],
                 'refresh_token' => $refreshToken,
@@ -197,7 +197,7 @@ class BkashV2Service
 
         $this->logApiExchange(
             'Refresh Token API',
-            '/checkout/token/refresh',
+            '/tokenized/checkout/token/refresh',
             $this->buildCredentialRequestHeaders($credentials['username'], $credentials['password']),
             [
                 'app_key' => $credentials['app_key'],
@@ -259,8 +259,8 @@ class BkashV2Service
     {
         $isSandbox = (bool) config('bkash.sandbox', true);
         $raw = $isSandbox
-            ? (string) config('bkash.sandbox_base_url', 'https://tokenized.sandbox.bka.sh')
-            : (string) config('bkash.live_base_url', 'https://tokenized.pay.bka.sh');
+            ? (string) config('bkash.sandbox_base_url', 'https://tokenized.sandbox.bka.sh/v1.2.0-beta')
+            : (string) config('bkash.live_base_url', 'https://tokenized.pay.bka.sh/v1.2.0-beta');
 
         return rtrim($raw, '/');
     }
@@ -368,7 +368,7 @@ class BkashV2Service
     }
 
     private function redactSensitiveData(mixed $value): mixed
-    {return $value;
+    {
         if (is_array($value)) {
             $clean = [];
 
