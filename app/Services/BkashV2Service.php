@@ -368,7 +368,7 @@ class BkashV2Service
     }
 
     private function redactSensitiveData(mixed $value): mixed
-    {
+    {return $value;
         if (is_array($value)) {
             $clean = [];
 
