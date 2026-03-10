@@ -22,7 +22,7 @@ class BkashController extends Controller
             // Get donation from session
             $donationId = $request->session()->get('donation_id');
 
-            if (!$donationId) {
+            if (! $donationId) {
                 Log::error('Donation ID not found in session');
                 return redirect()->route('landing')
                     ->withErrors(['error' => 'Session expired. Please try again.']);
@@ -30,7 +30,7 @@ class BkashController extends Controller
 
             $donation = Donation::find($donationId);
 
-            if (!$donation) {
+            if (! $donation) {
                 Log::error('Donation not found', ['id' => $donationId]);
                 return redirect()->route('landing')
                     ->withErrors(['error' => 'Donation not found.']);
@@ -64,52 +64,71 @@ class BkashController extends Controller
                 return redirect()->route('thank-you');
             }
 
-            // Check if payment was cancelled
-            if ($status === 'cancel' || $status === 'failure') {
+            // Cancel callback URL scenario (user closed bKash page).
+            if (in_array($status, ['cancel', 'cancelled'], true)) {
                 $donation->update(['status' => 'failed']);
+
                 return redirect()->route('landing')
-                    ->withErrors(['error' => 'Payment was cancelled or failed.']);
+                    ->withErrors(['error' => 'Payment Cancelled by User.']);
+            }
+
+            // Failure callback URL scenario (e.g. wrong OTP multiple times).
+            if (in_array($status, ['failure', 'failed'], true)) {
+                $donation->update(['status' => 'failed']);
+
+                return redirect()->route('landing')
+                    ->withErrors(['error' => 'Payment Failed. Invalid OTP or authorization issue. Please try again.']);
             }
 
             // Execute payment
             if ($status === 'success') {
-                $response = $this->bkash->executePayment($paymentID);
-                $responsePaymentId = (string) ($response['paymentID'] ?? $response['paymentId'] ?? '');
-                $responseAmount = number_format((float) ($response['amount'] ?? 0), 2, '.', '');
-                $donationAmount = number_format((float) $donation->amount, 2, '.', '');
+                $queryResponse = $this->bkash->queryPayment($paymentID);
+                $finalResponse = $queryResponse;
 
-                // Verify payment was successful
-                if (
-                    isset($response['transactionStatus'])
-                    && strtolower((string) $response['transactionStatus']) === 'completed'
-                    && $responsePaymentId === $paymentID
-                    && $responseAmount === $donationAmount
-                ) {
-                    // Update donation status
+                // Execute only when query shows payment is not completed yet.
+                if (! $this->isSuccessfulPaymentForDonation($queryResponse, $donation, $paymentID)) {
+                    $executeResponse = $this->bkash->executePayment($paymentID);
+                    $finalResponse = $executeResponse;
+
+                    $queryAfterExecute = $this->bkash->queryPayment($paymentID);
+                    $finalResponse = $queryAfterExecute;
+                }
+
+                $trxId = (string) ($finalResponse['trxID'] ?? $finalResponse['trxId'] ?? '');
+                if ($trxId !== '') {
+                    $searchResponse = $this->bkash->searchTransaction($trxId);
+
+                    if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
+                        $finalResponse = $searchResponse;
+                    }
+                }
+
+                if ($this->isSuccessfulPaymentForDonation($finalResponse, $donation, $paymentID)) {
+                    $resolvedTrxId = $finalResponse['trxID'] ?? $finalResponse['trxId'] ?? null;
+
                     $donation->update([
                         'status' => 'success',
-                        'transaction_id' => $response['trxID'] ?? $response['trxId'] ?? null,
+                        'transaction_id' => $resolvedTrxId,
                         'bkash_payment_id' => $paymentID,
                     ]);
 
                     Log::info('Payment successful', [
                         'donation_id' => $donation->id,
-                        'transaction_id' => $response['trxID'] ?? $response['trxId'] ?? null,
+                        'transaction_id' => $resolvedTrxId,
                     ]);
 
-                    // Store donation ID for thank you page
                     $request->session()->put('donation_id', $donation->id);
 
                     return redirect()->route('thank-you');
                 }
 
-                // Payment execution failed
-                Log::error('Payment execution failed', [
+                Log::error('Payment verification failed after query/execute/search', [
                     'donation_id' => $donation->id,
                     'payment_id_suffix' => substr($paymentID, -8),
-                    'transaction_status' => $response['transactionStatus'] ?? null,
-                    'statusCode' => $response['statusCode'] ?? null,
+                    'transaction_status' => $finalResponse['transactionStatus'] ?? null,
+                    'statusCode' => $finalResponse['statusCode'] ?? null,
                 ]);
+
                 $donation->update(['status' => 'failed']);
 
                 return redirect()->route('landing')
@@ -139,7 +158,36 @@ class BkashController extends Controller
             }
 
             return redirect()->route('landing')
-                ->withErrors(['error' => 'An error occurred processing your payment.']);
+                ->withErrors(['error' => $this->toUserFriendlyMessage($e->getMessage())]);
         }
+    }
+
+    private function isSuccessfulPaymentForDonation(array $response, Donation $donation, string $paymentID): bool
+    {
+        $responsePaymentId = (string) ($response['paymentID'] ?? $response['paymentId'] ?? '');
+        $responseAmount = number_format((float) ($response['amount'] ?? 0), 2, '.', '');
+        $donationAmount = number_format((float) $donation->amount, 2, '.', '');
+        $transactionStatus = strtolower((string) ($response['transactionStatus'] ?? ''));
+
+        return $transactionStatus === 'completed'
+            && $responsePaymentId === $paymentID
+            && $responseAmount === $donationAmount;
+    }
+
+    private function toUserFriendlyMessage(string $error): string
+    {
+        $normalized = strtolower($error);
+
+        if (str_contains($normalized, 'cancel')) {
+            return 'Payment Cancelled by User.';
+        }
+
+        if (str_contains($normalized, 'otp')) {
+            return 'Payment Failed. Invalid OTP or authorization issue. Please try again.';
+        }
+
+        return trim($error) !== ''
+            ? $error
+            : 'An error occurred processing your payment.';
     }
 }

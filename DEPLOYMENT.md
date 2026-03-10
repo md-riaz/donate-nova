@@ -270,7 +270,7 @@ sudo nano /etc/logrotate.d/donate-nova
 3. Verify transaction is recorded in database (`donations` table status should become `success`)
 4. Check logs for any errors: `tail -f storage/logs/laravel.log`
 
-The application uses local bKash API v2 integration through `app/Services/BkashV2Service.php` and callback route `/payment/callback`.
+The application uses local bKash Tokenized Checkout API `v1.2.0-beta` integration through `app/Services/BkashV2Service.php` and callback route `/payment/callback`.
 
 ## Step 14: Go Live
 

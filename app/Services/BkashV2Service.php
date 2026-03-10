@@ -5,11 +5,21 @@ namespace App\Services;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class BkashV2Service
 {
     private const TOKEN_CACHE_KEY = 'bkash_token';
     private const REFRESH_TOKEN_CACHE_KEY = 'bkash_refresh_token';
+    private const REDACT_KEYS = [
+        'app_secret',
+        'password',
+        'authorization',
+        'id_token',
+        'refresh_token',
+        'token',
+        'access_token',
+    ];
 
     public function createPayment(array $payload): array
     {
@@ -27,9 +37,17 @@ class BkashV2Service
         ];
 
         $response = $this->withToken($token, $credentials['app_key'])
-            ->post('/tokenized-checkout/payment/create', $requestPayload);
+            ->post('/tokenized/checkout/create', $requestPayload);
 
         $data = $response->json() ?? [];
+        $this->logApiExchange(
+            'Create API',
+            '/tokenized/checkout/create',
+            $this->buildTokenRequestHeaders($token, $credentials['app_key']),
+            $requestPayload,
+            $data,
+            $response->status()
+        );
         $this->assertApiSuccess($response, $data, 'Failed to create bKash payment');
 
         return $data;
@@ -41,12 +59,74 @@ class BkashV2Service
         $token = $this->getToken();
 
         $response = $this->withToken($token, $credentials['app_key'])
-            ->post('/tokenized-checkout/payment/execute', [
-                'paymentId' => $paymentId,
+            ->post('/tokenized/checkout/execute', [
+                'paymentID' => $paymentId,
             ]);
 
         $data = $response->json() ?? [];
+        $this->logApiExchange(
+            'Execute API',
+            '/tokenized/checkout/execute',
+            $this->buildTokenRequestHeaders($token, $credentials['app_key']),
+            [
+                'paymentID' => $paymentId,
+            ],
+            $data,
+            $response->status()
+        );
         $this->assertApiSuccess($response, $data, 'Payment execution failed');
+
+        return $data;
+    }
+
+    public function queryPayment(string $paymentId): array
+    {
+        $credentials = $this->getCredentials();
+        $token = $this->getToken();
+
+        $response = $this->withToken($token, $credentials['app_key'])
+            ->post('/tokenized/checkout/payment/status', [
+                'paymentID' => $paymentId,
+            ]);
+
+        $data = $response->json() ?? [];
+        $this->logApiExchange(
+            'Query Payment API',
+            '/tokenized/checkout/payment/status',
+            $this->buildTokenRequestHeaders($token, $credentials['app_key']),
+            [
+                'paymentID' => $paymentId,
+            ],
+            $data,
+            $response->status()
+        );
+        $this->assertApiSuccess($response, $data, 'Payment query failed');
+
+        return $data;
+    }
+
+    public function searchTransaction(string $trxId): array
+    {
+        $credentials = $this->getCredentials();
+        $token = $this->getToken();
+
+        $response = $this->withToken($token, $credentials['app_key'])
+            ->post('/tokenized/checkout/payment/search', [
+                'trxID' => $trxId,
+            ]);
+
+        $data = $response->json() ?? [];
+        $this->logApiExchange(
+            'Search Transaction API',
+            '/tokenized/checkout/payment/search',
+            $this->buildTokenRequestHeaders($token, $credentials['app_key']),
+            [
+                'trxID' => $trxId,
+            ],
+            $data,
+            $response->status()
+        );
+        $this->assertApiSuccess($response, $data, 'Transaction search failed');
 
         return $data;
     }
@@ -80,10 +160,22 @@ class BkashV2Service
                 'username' => $credentials['username'],
                 'password' => $credentials['password'],
             ])
-            ->post('/tokenized-checkout/auth/grant-token', [
+            ->post('/checkout/token/grant', [
                 'app_key' => $credentials['app_key'],
                 'app_secret' => $credentials['app_secret'],
             ]);
+
+        $this->logApiExchange(
+            'Grant Token API',
+            '/checkout/token/grant',
+            $this->buildCredentialRequestHeaders($credentials['username'], $credentials['password']),
+            [
+                'app_key' => $credentials['app_key'],
+                'app_secret' => $credentials['app_secret'],
+            ],
+            $response->json() ?? [],
+            $response->status()
+        );
 
         return $this->cacheTokenFromResponse($response, 'Failed to get bKash token');
     }
@@ -97,11 +189,24 @@ class BkashV2Service
                 'username' => $credentials['username'],
                 'password' => $credentials['password'],
             ])
-            ->post('/tokenized-checkout/auth/refresh-token', [
+            ->post('/checkout/token/refresh', [
                 'app_key' => $credentials['app_key'],
                 'app_secret' => $credentials['app_secret'],
                 'refresh_token' => $refreshToken,
             ]);
+
+        $this->logApiExchange(
+            'Refresh Token API',
+            '/checkout/token/refresh',
+            $this->buildCredentialRequestHeaders($credentials['username'], $credentials['password']),
+            [
+                'app_key' => $credentials['app_key'],
+                'app_secret' => $credentials['app_secret'],
+                'refresh_token' => $refreshToken,
+            ],
+            $response->json() ?? [],
+            $response->status()
+        );
 
         return $this->cacheTokenFromResponse($response, 'Failed to refresh bKash token');
     }
@@ -154,8 +259,8 @@ class BkashV2Service
     {
         $isSandbox = (bool) config('bkash.sandbox', true);
         $raw = $isSandbox
-            ? (string) config('bkash.sandbox_base_url', 'https://tokenized.sandbox.bka.sh/v2')
-            : (string) config('bkash.live_base_url', 'https://tokenized.pay.bka.sh/v2');
+            ? (string) config('bkash.sandbox_base_url', 'https://tokenized.sandbox.bka.sh')
+            : (string) config('bkash.live_base_url', 'https://tokenized.pay.bka.sh');
 
         return rtrim($raw, '/');
     }
@@ -194,7 +299,13 @@ class BkashV2Service
 
     private function extractApiErrorMessage(array $data, int $status): string
     {
-        return (string) ($data['errorMessageEn'] ?? $data['statusMessage'] ?? $data['message'] ?? ('HTTP '.$status));
+        $apiMessage = (string) ($data['errorMessageEn'] ?? $data['statusMessage'] ?? $data['message'] ?? '');
+
+        if ($apiMessage !== '') {
+            return $apiMessage;
+        }
+
+        return 'HTTP '.$status;
     }
 
     private function resolvePayerReference(string $raw): string
@@ -211,5 +322,70 @@ class BkashV2Service
         }
 
         return '01700000000';
+    }
+
+    private function logApiExchange(
+        string $apiTitle,
+        string $path,
+        array $requestHeaders,
+        array $requestBody,
+        array $apiResponse,
+        int $statusCode
+    ): void
+    {
+        if (! (bool) config('app.debug', false)) {
+            return;
+        }
+
+        Log::debug('bKash API request/response', [
+            'API Title' => $apiTitle,
+            'API URL' => rtrim($this->resolveBaseUrl(), '/').'/'.ltrim($path, '/'),
+            'Request Headers' => $this->redactSensitiveData($requestHeaders),
+            'Request Body' => $this->redactSensitiveData($requestBody),
+            'API Response' => $this->redactSensitiveData($apiResponse),
+            'HTTP Status' => $statusCode,
+        ]);
+    }
+
+    private function buildTokenRequestHeaders(string $token, string $appKey): array
+    {
+        return [
+            'Authorization' => $token,
+            'X-APP-Key' => $appKey,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    private function buildCredentialRequestHeaders(string $username, string $password): array
+    {
+        return [
+            'username' => $username,
+            'password' => $password,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    private function redactSensitiveData(mixed $value): mixed
+    {return $value;
+        if (is_array($value)) {
+            $clean = [];
+
+            foreach ($value as $key => $item) {
+                $keyStr = strtolower((string) $key);
+
+                if (in_array($keyStr, self::REDACT_KEYS, true)) {
+                    $clean[$key] = '***';
+                    continue;
+                }
+
+                $clean[$key] = $this->redactSensitiveData($item);
+            }
+
+            return $clean;
+        }
+
+        return $value;
     }
 }

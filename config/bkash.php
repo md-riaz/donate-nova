@@ -15,8 +15,8 @@ return [
         'password' => env('BKASH_PASSWORD', ''),
     ],
 
-    'sandbox_base_url' => env('SANDBOX_BASE_URL', 'https://tokenized.sandbox.bka.sh'),
-    'live_base_url' => env('LIVE_BASE_URL', 'https://tokenized.pay.bka.sh'),
+    'sandbox_base_url' => env('BKASH_SANDBOX_BASE_URL', 'https://tokenized.sandbox.bka.sh/v1.2.0-beta'),
+    'live_base_url' => env('BKASH_LIVE_BASE_URL', 'https://tokenized.pay.bka.sh/v1.2.0-beta'),
 
     'allowed_redirect_hosts' => [
         'payment.bkash.com',
@@ -25,8 +25,6 @@ return [
         'tokenized.pay.bka.sh',
         'tokenized.sandbox.bka.sh',
     ],
-
-    'version' => 'v1.2.0-beta',
 
     'cache' => [
         'token_lifetime' => 3600,
