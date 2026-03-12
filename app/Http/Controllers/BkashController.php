@@ -82,67 +82,84 @@ class BkashController extends Controller
                     ->withErrors(['error' => 'Payment Failed. Invalid OTP or authorization issue. Please try again.']);
             }
 
-            // Execute payment
+            // Execute payment (per bKash: execute first, handle timeout by querying)
             if ($status === 'success') {
                 $this->delayBeforeConsistencySensitiveApiCall();
-                $queryResponse = $this->queryPaymentWithRetry($paymentID, 0, 0) ?? [];
-                $finalResponse = $queryResponse;
+                
+                // Execute with timeout detection - on timeout, queries immediately
+                $finalResponse = $this->executePaymentWithTimeoutHandling($paymentID, $donation);
 
-                // Execute only when query shows payment is not completed yet.
-                if (! $this->isSuccessfulPaymentForDonation($queryResponse, $donation, $paymentID)) {
-                    $executeResponse = $this->bkash->executePayment($paymentID);
-
-                    // Trust execute response immediately when it confirms completion.
-                    $finalResponse = $executeResponse;
-
-                    // Post-execute query can be eventually consistent; retry once with short backoff.
-                    $this->delayBeforeConsistencySensitiveApiCall();
-                    $queryAfterExecute = $this->queryPaymentWithRetry($paymentID, 3, 1000);
-                    if (is_array($queryAfterExecute)
-                        && $this->isSuccessfulPaymentForDonation($queryAfterExecute, $donation, $paymentID)) {
-                        $finalResponse = $queryAfterExecute;
-                    }
-                }
-
-                $trxId = (string) ($finalResponse['trxID'] ?? $finalResponse['trxId'] ?? '');
-                if ($trxId !== '') {
-                    try {
-                        $this->delayBeforeConsistencySensitiveApiCall();
-                        $searchResponse = $this->bkash->searchTransaction($trxId);
-
-                        if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
-                            $finalResponse = $searchResponse;
-                        }
-                    } catch (\Throwable $searchError) {
-                        Log::warning('Search transaction failed after execute', [
-                            'donation_id' => $donation->id,
-                            'payment_id_suffix' => substr($paymentID, -8),
-                            'trx_id_suffix' => substr($trxId, -4),
-                            'error' => $searchError->getMessage(),
-                        ]);
-                    }
-                }
-
-                if ($this->isSuccessfulPaymentForDonation($finalResponse, $donation, $paymentID)) {
-                    $resolvedTrxId = $finalResponse['trxID'] ?? $finalResponse['trxId'] ?? null;
-
-                    $donation->update([
-                        'status' => 'success',
-                        'transaction_id' => $resolvedTrxId,
-                        'bkash_payment_id' => $paymentID,
-                    ]);
-
-                    Log::info('Payment successful', [
+                if ($finalResponse === null) {
+                    Log::error('Payment execution/query failed - no valid response', [
                         'donation_id' => $donation->id,
-                        'transaction_id' => $resolvedTrxId,
+                        'payment_id_suffix' => substr($paymentID, -8),
                     ]);
 
+                    $donation->update(['status' => 'failed']);
+
+                    return redirect()->route('landing')
+                        ->withErrors(['error' => 'Payment verification failed.']);
+                }
+
+                // Handle "Initiated" status - transaction still processing at bKash
+                if ($this->isPaymentInitiated($finalResponse)) {
+                    $donation->update(['status' => 'pending']);
+
+                    Log::info('Payment pending - transaction initiated at bKash', [
+                        'donation_id' => $donation->id,
+                        'payment_id_suffix' => substr($paymentID, -8),
+                    ]);
+
+                    // Redirect to thank-you but with pending status; background job can retry
                     $request->session()->put('donation_id', $donation->id);
 
-                    return redirect()->route('thank-you');
+                    return redirect()->route('thank-you')
+                        ->with('notice', 'Your payment is being processed. You will receive confirmation soon.');
                 }
 
-                Log::error('Payment verification failed after query/execute/search', [
+                // Handle "Completed" status
+                if ($this->isPaymentCompleted($finalResponse, $donation, $paymentID)) {
+                    // Verify with search transaction for final confirmation
+                    $trxId = (string) ($finalResponse['trxID'] ?? $finalResponse['trxId'] ?? '');
+                    if ($trxId !== '') {
+                        try {
+                            $this->delayBeforeConsistencySensitiveApiCall();
+                            $searchResponse = $this->bkash->searchTransaction($trxId);
+
+                            if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
+                                $finalResponse = $searchResponse;
+                            }
+                        } catch (\Throwable $searchError) {
+                            Log::warning('Search transaction failed after completion', [
+                                'donation_id' => $donation->id,
+                                'payment_id_suffix' => substr($paymentID, -8),
+                                'trx_id_suffix' => substr($trxId, -4),
+                                'error' => $searchError->getMessage(),
+                            ]);
+                        }
+                    }
+
+                    if ($this->isPaymentCompleted($finalResponse, $donation, $paymentID)) {
+                        $resolvedTrxId = $finalResponse['trxID'] ?? $finalResponse['trxId'] ?? null;
+
+                        $donation->update([
+                            'status' => 'success',
+                            'transaction_id' => $resolvedTrxId,
+                            'bkash_payment_id' => $paymentID,
+                        ]);
+
+                        Log::info('Payment successful', [
+                            'donation_id' => $donation->id,
+                            'transaction_id' => $resolvedTrxId,
+                        ]);
+
+                        $request->session()->put('donation_id', $donation->id);
+
+                        return redirect()->route('thank-you');
+                    }
+                }
+
+                Log::error('Payment verification failed - unexpected status', [
                     'donation_id' => $donation->id,
                     'payment_id_suffix' => substr($paymentID, -8),
                     'transaction_status' => $finalResponse['transactionStatus'] ?? null,
@@ -182,7 +199,56 @@ class BkashController extends Controller
         }
     }
 
-    private function isSuccessfulPaymentForDonation(array $response, Donation $donation, string $paymentID): bool
+    private function executePaymentWithTimeoutHandling(string $paymentID, Donation $donation): ?array
+    {
+        try {
+            // Execute payment - bKash timeout is 30 seconds
+            // If we get a response within 30 sec, it's trustworthy
+            $executeResponse = $this->bkash->executePayment($paymentID);
+
+            return $executeResponse;
+        } catch (\Throwable $executeError) {
+            $errorMsg = strtolower($executeError->getMessage());
+
+            // Check if this is a timeout error (no response within 30 sec)
+            $isTimeout = str_contains($errorMsg, 'timeout')
+                || str_contains($errorMsg, 'timed out')
+                || str_contains($errorMsg, 'unable to reach')
+                || str_contains($errorMsg, 'connection reset')
+                || str_contains($errorMsg, 'no response');
+
+            if ($isTimeout) {
+                Log::warning('Execute Payment API timeout - querying payment status', [
+                    'donation_id' => $donation->id,
+                    'payment_id_suffix' => substr($paymentID, -8),
+                    'error' => $executeError->getMessage(),
+                ]);
+
+                // Per bKash: On timeout, MUST call queryPayment to check actual status
+                $this->delayBeforeConsistencySensitiveApiCall();
+
+                return $this->queryPaymentWithRetry($paymentID, 3, 1000);
+            }
+
+            // Non-timeout error
+            Log::error('Execute Payment API error', [
+                'donation_id' => $donation->id,
+                'payment_id_suffix' => substr($paymentID, -8),
+                'error' => $executeError->getMessage(),
+            ]);
+
+            throw $executeError;
+        }
+    }
+
+    private function isPaymentInitiated(array $response): bool
+    {
+        $transactionStatus = strtolower((string) ($response['transactionStatus'] ?? ''));
+
+        return $transactionStatus === 'initiated';
+    }
+
+    private function isPaymentCompleted(array $response, Donation $donation, string $paymentID): bool
     {
         $responsePaymentId = (string) ($response['paymentID'] ?? $response['paymentId'] ?? '');
         $responseAmount = number_format((float) ($response['amount'] ?? 0), 2, '.', '');
