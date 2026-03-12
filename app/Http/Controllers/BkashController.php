@@ -109,7 +109,7 @@ class BkashController extends Controller
                 $donation->update(['status' => 'failed']);
 
                 return redirect()->to($this->landingWithDonateFormAnchor())
-                    ->withErrors(['error' => 'Payment Failed. Invalid OTP or authorization issue. Please try again.']);
+                    ->withErrors(['error' => 'Payment Failed. Invalid OTP or insufficient balance. Please try again.']);
             }
 
             // Execute payment (per bKash: execute first, handle timeout by querying)
