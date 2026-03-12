@@ -65,6 +65,16 @@ class DonationController extends Controller
                     'bkash_payment_id' => $response['paymentID'] ?? $response['paymentId'] ?? null,
                 ]);
 
+                // Extract and store the callback signature bKash embeds in the callback URLs.
+                // This is validated on callback to reject fabricated requests.
+                $callbackSignature = null;
+                $successCallbackURL = (string) ($response['successCallbackURL'] ?? '');
+                if ($successCallbackURL !== '') {
+                    parse_str((string) parse_url($successCallbackURL, PHP_URL_QUERY), $callbackParams);
+                    $callbackSignature = $callbackParams['signature'] ?? null;
+                }
+                $request->session()->put('bkash_signature', $callbackSignature);
+
                 return redirect()->away($redirectUrl);
             }
 

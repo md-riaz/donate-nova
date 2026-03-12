@@ -19,14 +19,44 @@ class BkashController extends Controller
     {
         $paymentID = (string) $request->query('paymentID', '');
         $status = strtolower((string) $request->query('status', ''));
+        $incomingSignature = (string) $request->query('signature', '');
+
+        Log::info('bKash callback received', [
+            'method' => $request->method(),
+            'full_url' => $request->fullUrl(),
+            'path' => $request->path(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'query_params' => $request->query(),
+            'request_payload' => $request->all(),
+            'raw_body' => $request->getContent(),
+            'headers' => $request->headers->all(),
+        ]);
 
         try {
+            // Validate bKash callback signature before any processing.
+            // The signature was stored in the session at payment creation time,
+            // extracted from the successCallbackURL bKash returned.
+            $storedSignature = (string) $request->session()->get('bkash_signature', '');
+
+            if ($storedSignature === '' || $incomingSignature === '' || !hash_equals($storedSignature, $incomingSignature)) {
+                Log::warning('bKash callback signature mismatch - possible fabricated callback', [
+                    'payment_id_suffix' => $paymentID !== '' ? substr($paymentID, -8) : null,
+                    'status' => $status,
+                    'has_stored_signature' => $storedSignature !== '',
+                    'has_incoming_signature' => $incomingSignature !== '',
+                ]);
+
+                return redirect()->to($this->landingWithDonateFormAnchor())
+                    ->withErrors(['error' => 'Invalid payment callback.']);
+            }
+
             // Get donation from session
             $donationId = $request->session()->get('donation_id');
 
             if (! $donationId) {
                 Log::error('Donation ID not found in session');
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Session expired. Please try again.']);
             }
 
@@ -34,7 +64,7 @@ class BkashController extends Controller
 
             if (! $donation) {
                 Log::error('Donation not found', ['id' => $donationId]);
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Donation not found.']);
             }
 
@@ -45,7 +75,7 @@ class BkashController extends Controller
 
                 $donation->update(['status' => 'failed']);
 
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Invalid payment callback.']);
             }
 
@@ -58,7 +88,7 @@ class BkashController extends Controller
 
                 $donation->update(['status' => 'failed']);
 
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Payment verification failed.']);
             }
 
@@ -70,7 +100,7 @@ class BkashController extends Controller
             if (in_array($status, ['cancel', 'cancelled'], true)) {
                 $donation->update(['status' => 'failed']);
 
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Payment Cancelled by User.']);
             }
 
@@ -78,7 +108,7 @@ class BkashController extends Controller
             if (in_array($status, ['failure', 'failed'], true)) {
                 $donation->update(['status' => 'failed']);
 
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Payment Failed. Invalid OTP or authorization issue. Please try again.']);
             }
 
@@ -97,7 +127,7 @@ class BkashController extends Controller
 
                     $donation->update(['status' => 'failed']);
 
-                    return redirect()->route('landing')
+                    return redirect()->to($this->landingWithDonateFormAnchor())
                         ->withErrors(['error' => 'Payment verification failed.']);
                 }
 
@@ -119,44 +149,56 @@ class BkashController extends Controller
 
                 // Handle "Completed" status
                 if ($this->isPaymentCompleted($finalResponse, $donation, $paymentID)) {
-                    // Verify with search transaction for final confirmation
-                    $trxId = (string) ($finalResponse['trxID'] ?? $finalResponse['trxId'] ?? '');
-                    if ($trxId !== '') {
-                        try {
-                            $this->delayBeforeConsistencySensitiveApiCall();
-                            $searchResponse = $this->bkash->searchTransaction($trxId);
+                    $executeResponse = $finalResponse;
+                    $resolvedTrxId = (string) ($executeResponse['trxID'] ?? $executeResponse['trxId'] ?? '');
 
-                            if (! empty($searchResponse) && isset($searchResponse['transactionStatus'])) {
-                                $finalResponse = $searchResponse;
-                            }
-                        } catch (\Throwable $searchError) {
-                            Log::warning('Search transaction failed after completion', [
-                                'donation_id' => $donation->id,
-                                'payment_id_suffix' => substr($paymentID, -8),
-                                'trx_id_suffix' => substr($trxId, -4),
-                                'error' => $searchError->getMessage(),
-                            ]);
-                        }
-                    }
+                    // Independently verify completion with bKash Query API.
+                    // Execute response is authoritative, but query provides a second confirmation.
+                    // bKash is eventually consistent: query may return 2033 "Transaction Not Found"
+                    // immediately after execute — queryPaymentWithRetry returns null in that case.
+                    // We trust execute if query cannot confirm due to eventual consistency.
+                    $this->delayBeforeConsistencySensitiveApiCall();
+                    $queryVerification = $this->queryPaymentWithRetry($paymentID, 3, 2000);
 
-                    if ($this->isPaymentCompleted($finalResponse, $donation, $paymentID)) {
-                        $resolvedTrxId = $finalResponse['trxID'] ?? $finalResponse['trxId'] ?? null;
-
-                        $donation->update([
-                            'status' => 'success',
-                            'transaction_id' => $resolvedTrxId,
-                            'bkash_payment_id' => $paymentID,
-                        ]);
-
-                        Log::info('Payment successful', [
+                    if ($queryVerification !== null && !$this->isPaymentCompleted($queryVerification, $donation, $paymentID)) {
+                        // Query returned a response but it contradicts execute — do not mark success.
+                        Log::error('Payment status conflict: execute says Completed but query disagrees', [
                             'donation_id' => $donation->id,
-                            'transaction_id' => $resolvedTrxId,
+                            'payment_id_suffix' => substr($paymentID, -8),
+                            'query_status' => $queryVerification['transactionStatus'] ?? null,
+                            'query_statusCode' => $queryVerification['statusCode'] ?? null,
                         ]);
 
-                        $request->session()->put('donation_id', $donation->id);
+                        $donation->update(['status' => 'failed']);
 
-                        return redirect()->route('thank-you');
+                        return redirect()->to($this->landingWithDonateFormAnchor())
+                            ->withErrors(['error' => 'Payment verification failed.']);
                     }
+
+                    if ($queryVerification === null) {
+                        // All query attempts failed (likely bKash eventual consistency / 2033).
+                        // Execute response is still authoritative; proceed with a warning.
+                        Log::warning('Query verification unavailable after execute — trusting execute response', [
+                            'donation_id' => $donation->id,
+                            'payment_id_suffix' => substr($paymentID, -8),
+                        ]);
+                    }
+
+                    $donation->update([
+                        'status' => 'success',
+                        'transaction_id' => $resolvedTrxId ?: null,
+                        'bkash_payment_id' => $paymentID,
+                    ]);
+
+                    Log::info('Payment successful', [
+                        'donation_id' => $donation->id,
+                        'transaction_id' => $resolvedTrxId ?: null,
+                        'query_verified' => $queryVerification !== null,
+                    ]);
+
+                    $request->session()->put('donation_id', $donation->id);
+
+                    return redirect()->route('thank-you');
                 }
 
                 Log::error('Payment verification failed - unexpected status', [
@@ -168,7 +210,7 @@ class BkashController extends Controller
 
                 $donation->update(['status' => 'failed']);
 
-                return redirect()->route('landing')
+                return redirect()->to($this->landingWithDonateFormAnchor())
                     ->withErrors(['error' => 'Payment verification failed.']);
             }
 
@@ -180,7 +222,7 @@ class BkashController extends Controller
             ]);
             $donation->update(['status' => 'failed']);
 
-            return redirect()->route('landing')
+            return redirect()->to($this->landingWithDonateFormAnchor())
                 ->withErrors(['error' => 'Invalid payment callback.']);
 
         } catch (\Exception $e) {
@@ -194,7 +236,7 @@ class BkashController extends Controller
                 $donation->update(['status' => 'failed']);
             }
 
-            return redirect()->route('landing')
+            return redirect()->to($this->landingWithDonateFormAnchor())
                 ->withErrors(['error' => $this->toUserFriendlyMessage($e->getMessage())]);
         }
     }
@@ -310,5 +352,10 @@ class BkashController extends Controller
     private function delayBeforeConsistencySensitiveApiCall(): void
     {
         usleep(self::CALLBACK_API_DELAY_MS * 1000);
+    }
+
+    private function landingWithDonateFormAnchor(): string
+    {
+        return route('landing') . '#donate-form';
     }
 }
